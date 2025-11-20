@@ -1,1 +1,156 @@
-🍎 Proyecto HuertoHogar App MóvilBienvenido al repositorio oficial de la aplicación móvil HuertoHogar. Esta aplicación Android nativa fue desarrollada utilizando Kotlin y Jetpack Compose, implementando una arquitectura robusta MVVM y persistencia de datos local.📋 Descripción del ProyectoHuertoHogar es una solución móvil para la gestión y visualización de un catálogo de productos agrícolas. La app permite a los usuarios registrarse, autenticarse de forma segura, explorar productos, ubicar tiendas físicas mediante GPS y personalizar su perfil con fotografías.🛠️ Stack Tecnológico y HerramientasLenguaje: KotlinUI Framework: Jetpack Compose (Material Design 3)Arquitectura: MVVM (Model-View-ViewModel) con Inyección de Dependencias manual.Base de Datos: Room Database (SQLite abstracto).Navegación: Jetpack Navigation Compose.Mapas: Google Maps SDK para Android.Cámara/Multimedia: API de Cámara nativa y FileProvider.Control de Versiones: Git & GitHub.🚀 Bitácora de Desarrollo (Paso a Paso)El desarrollo de este proyecto se llevó a cabo en fases incrementales, superando desafíos técnicos de configuración y lógica.Fase 1: Configuración del Entorno y ArquitecturaCreación del Proyecto: Se inició un proyecto "Empty Activity" en Android Studio configurado con Kotlin y Compose.Estructura de Carpetas: Se implementó una separación de responsabilidades creando paquetes para:model: Modelos de datos.viewmodels: Lógica de negocio y gestión de estado.views: Interfaz de usuario (Composables).data: Persistencia y repositorios.navigation: Gestión de rutas.Corrección de Gradle/JDK: Se solucionaron conflictos críticos de versiones entre el JDK del sistema y el JDK embebido de Android Studio (jbr-21), configurando correctamente el JAVA_HOME.Fase 2: Autenticación y Persistencia (Room)Base de Datos Local: Se integró la librería Room.Creación de la entidad User (Tabla de usuarios).Creación del UserDao (Consultas SQL nativas).Configuración de AppDatabase con patrón Singleton.Manejo de Errores (ANR): Se implementó .allowMainThreadQueries() y .fallbackToDestructiveMigration() para prevenir el cierre inesperado de la app ("App keeps stopping") durante la inicialización de la DB en dispositivos de prueba.Vistas de Auth: Desarrollo de LoginView y RegistroView con validación de campos y feedback visual.Fase 3: Funcionalidad Principal (Catálogo)Repositorio de Datos: Se creó UserRepository para intermediar entre la DB y la UI.Datos Mock: Se inyectaron datos estáticos de productos (Manzanas, Miel, etc.) para simular la respuesta de una API.HomeView: Implementación de LazyColumn para un listado eficiente de productos con tarjetas personalizadas (ProductCard).Fase 4: Recursos Nativos (Requisitos Avanzados)Google Maps:Integración de maps-compose.Configuración de permisos en AndroidManifest.Implementación de MapaTiendasView con marcadores personalizados en coordenadas de Santiago.Cámara y Galería:Configuración de FileProvider para manejo seguro de URIs.Implementación de CameraView permitiendo al usuario tomar fotos o seleccionarlas de la galería para su perfil.Fase 5: DespliegueGeneración de APK: Compilación exitosa del archivo app-debug.apk para pruebas en dispositivos físicos.Versioanmiento: Subida del código fuente a repositorio público en GitHub.✨ Funcionalidades Clave✅ Registro e Inicio de Sesión: Con persistencia de datos real.✅ Catálogo Dinámico: Visualización fluida de productos.✅ Geolocalización: Mapa interactivo de sucursales.✅ Perfil Multimedia: Uso de cámara nativa y almacenamiento.👤 AutorDesarrollado por Ronald Marrián Álvarez para la asignatura de Programación de Aplicaciones Móviles.
+🌿 Proyecto HuertoHogar App Móvil
+
+
+
+Bienvenido al repositorio oficial de la aplicación móvil nativa HuertoHogar. Este proyecto representa una solución integral para la gestión y visualización de productos agrícolas, desarrollada con las tecnologías más modernas del ecosistema Android: Kotlin y Jetpack Compose.
+
+La aplicación implementa una arquitectura MVVM (Model-View-ViewModel) robusta y escalable, garantizando un código limpio, mantenible y eficiente, con persistencia de datos local segura.
+
+📋 Descripción General y Propósito
+
+HuertoHogar nace con el objetivo de conectar a los usuarios con productos frescos y saludables directamente desde su dispositivo móvil. La aplicación ofrece una experiencia de usuario fluida e intuitiva que permite:
+
+Gestión de Identidad: Registro y autenticación segura de usuarios.
+
+Exploración de Productos: Un catálogo visual y detallado de productos disponibles.
+
+Geolocalización: Ubicación precisa de tiendas físicas mediante integración con mapas.
+
+Personalización: Gestión de perfil de usuario con capacidad multimedia (cámara y galería).
+
+🛠️ Stack Tecnológico y Herramientas
+
+Este proyecto ha sido construido utilizando un stack tecnológico de vanguardia:
+
+Lenguaje de Programación: Kotlin (100% nativo).
+
+Interfaz de Usuario (UI): Jetpack Compose (Material Design 3).
+
+Arquitectura: MVVM (Model-View-ViewModel) con Inyección de Dependencias manual (Factory Pattern).
+
+Persistencia de Datos: Room Database (Abstracción sobre SQLite).
+
+Navegación: Jetpack Navigation Compose.
+
+Servicios de Mapas: Google Maps SDK para Android (maps-compose).
+
+Multimedia: API de Cámara nativa (CameraX intent) y FileProvider seguro.
+
+Control de Versiones: Git & GitHub.
+
+IDE: Android Studio.
+
+🚀 Bitácora de Desarrollo (Roadmap de Implementación)
+
+El ciclo de vida del desarrollo se estructuró en fases incrementales para asegurar la estabilidad y funcionalidad en cada etapa:
+
+🔹 Fase 1: Cimientos y Arquitectura
+
+Inicialización: Configuración de proyecto "Empty Activity" con soporte para Compose y Kotlin DSL.
+
+Estructura Modular: Organización del código en paquetes semánticos para una clara separación de responsabilidades:
+
+model: Definición de entidades de datos (User, Product).
+
+viewmodels: Lógica de negocio y estado de la UI (HomeViewModel, LoginViewModel).
+
+views: Componentes visuales Composables (HomeView, CameraView).
+
+data: Capa de persistencia (AppDatabase, UserDao, UserRepository).
+
+navigation: Gestión centralizada de rutas (AppRoutes).
+
+Resolución de Conflictos: Configuración precisa de JAVA_HOME y versiones de Gradle/JDK para evitar errores de compilación (jbr-21).
+
+🔹 Fase 2: Seguridad y Persistencia (Core)
+
+Integración de Room:
+
+Definición de Entidades y DAOs.
+
+Implementación de AppDatabase como Singleton.
+
+Estabilidad (ANR Fixes): Implementación de estrategias de hilos (.allowMainThreadQueries()) para optimizar la inicialización de la base de datos y prevenir bloqueos (ANR).
+
+Sistema de Autenticación: Desarrollo de flujos completos de Registro y Login con validación de campos en tiempo real.
+
+🔹 Fase 3: Lógica de Negocio y Catálogo
+
+Patrón Repository: Implementación de UserRepository como única fuente de verdad, intermediando entre la DB local y la UI.
+
+Mock Data: Simulación de servicios backend mediante inyección de datos estáticos para el catálogo.
+
+Interfaz Reactiva: Uso de LazyColumn y Card en HomeView para un renderizado eficiente de listas de productos.
+
+🔹 Fase 4: Integración de Hardware (Recursos Nativos)
+
+Geolocalización:
+
+Implementación de GoogleMap composable.
+
+Gestión de permisos de ubicación (ACCESS_FINE_LOCATION).
+
+Marcadores personalizados en el mapa.
+
+Multimedia y Archivos:
+
+Configuración de seguridad con FileProvider (file_paths.xml).
+
+Lógica para captura de fotos (Cámara) y selección de imágenes (Galería) en CameraView.
+
+🔹 Fase 5: Despliegue y Entrega
+
+Compilación: Generación exitosa del artefacto instalable app-debug.apk.
+
+Documentación: Creación de este README y subida al repositorio público.
+
+✨ Funcionalidades Clave Detalladas
+
+Funcionalidad
+
+Descripción Técnica
+
+Estado
+
+Registro de Usuarios
+
+Validación de formularios y almacenamiento encriptado (simulado) en Room.
+
+✅ Completo
+
+Inicio de Sesión
+
+Autenticación contra base de datos local con persistencia de sesión.
+
+✅ Completo
+
+Catálogo Dinámico
+
+Scroll infinito y renderizado optimizado de items.
+
+✅ Completo
+
+Mapa de Tiendas
+
+Integración nativa de Google Maps con puntos de interés (POIs).
+
+✅ Completo
+
+Perfil con Foto
+
+Uso de Intents para interactuar con la Cámara y Galería del sistema.
+
+✅ Completo
+
+
+👤 Autor y Créditos
+
+Desarrollado por Ronald Marrián Álvarez.
+
+Asignatura: Programación de Aplicaciones Móviles.
+
+Institución: DuocUc Concepcion.
+
+Fecha: Noviembre 2025.
+
+Este proyecto es de código abierto y está disponible para fines educativos.
