@@ -1,5 +1,10 @@
 package com.example.proyectohuertohogar.views
 
+import android.widget.Toast
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -7,7 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.ShoppingCart
@@ -22,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.proyectohuertohogar.HuertoHogarApp
+import com.example.proyectohuertohogar.data.CartRepository
 import com.example.proyectohuertohogar.model.Product
 import com.example.proyectohuertohogar.navigation.AppRoutes
 import com.example.proyectohuertohogar.viewmodels.HomeViewModel
@@ -35,17 +41,35 @@ fun HomeView(
         (LocalContext.current.applicationContext as HuertoHogarApp).userRepository))
 ) {
     val state by vm.uiState.collectAsState()
+    val cartItems by CartRepository.cartItems.collectAsState()
+
+    // Estado para controlar la animación de entrada
+    var isVisible by remember { mutableStateOf(false) }
+
+    // Efecto: Al cargar la vista, activamos la animación
+    LaunchedEffect(Unit) {
+        isVisible = true
+    }
 
     Scaffold(
         topBar = {
             CenterAlignedTopAppBar(
-                title = { Text("Catálogo HuertoHogar") },
+                title = { Text("Catálogo") },
                 actions = {
-                    // Botón para ir al Perfil (Cámara)
+                    IconButton(onClick = { navController.navigate(AppRoutes.Carrito.route) }) {
+                        BadgedBox(
+                            badge = {
+                                if (cartItems.isNotEmpty()) {
+                                    Badge { Text(cartItems.size.toString()) }
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito")
+                        }
+                    }
                     IconButton(onClick = { navController.navigate(AppRoutes.Perfil.route) }) {
                         Icon(Icons.Default.Person, contentDescription = "Perfil")
                     }
-                    // Botón para Salir (Logout simulado)
                     IconButton(onClick = {
                         navController.navigate(AppRoutes.Login.route) {
                             popUpTo(AppRoutes.Home.route) { inclusive = true }
@@ -57,7 +81,6 @@ fun HomeView(
             )
         },
         floatingActionButton = {
-            // Botón Flotante para ir al Mapa (Recurso Nativo 1)
             ExtendedFloatingActionButton(
                 onClick = { navController.navigate(AppRoutes.MapaTiendas.route) },
                 icon = { Icon(Icons.Default.Place, "Mapa") },
@@ -65,29 +88,33 @@ fun HomeView(
             )
         }
     ) { paddingValues ->
-
         if (state.products.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator()
             }
         } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+            // ANIMACIÓN: Usamos AnimatedVisibility para que la lista entre suavemente
+            AnimatedVisibility(
+                visible = isVisible,
+                enter = fadeIn(animationSpec = tween(1000)) + slideInVertically(initialOffsetY = { 50 }),
+                modifier = Modifier.padding(paddingValues)
             ) {
-                item {
-                    Text(
-                        "Nuestros Productos Frescos",
-                        style = MaterialTheme.typography.headlineSmall,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-                }
-
-                items(state.products) { product ->
-                    ProductCard(product)
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        Text(
+                            "Productos Frescos",
+                            style = MaterialTheme.typography.headlineSmall,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    items(state.products) { product ->
+                        ProductCard(product)
+                    }
                 }
             }
         }
@@ -96,56 +123,44 @@ fun HomeView(
 
 @Composable
 fun ProductCard(product: Product) {
+    val context = LocalContext.current
+
     Card(
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         shape = RoundedCornerShape(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
+            modifier = Modifier.padding(16.dp).fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Placeholder para la imagen (Icono)
             Box(
                 modifier = Modifier
-                    .size(80.dp)
+                    .size(70.dp)
                     .background(MaterialTheme.colorScheme.primaryContainer, shape = RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.Default.ShoppingCart,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(40.dp)
-                )
+                Icon(Icons.Default.ShoppingCart, null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
 
             Spacer(modifier = Modifier.width(16.dp))
 
-            Column {
-                Text(
-                    text = product.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "$ ${product.price} / ${product.unit}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = product.category,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Color.Gray
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = if(product.stock > 0) "Stock: ${product.stock}" else "Agotado",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = if(product.stock > 0) Color.DarkGray else Color.Red
-                )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(product.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("$ ${product.price} / ${product.unit}", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+
+                Button(
+                    onClick = {
+                        CartRepository.addProduct(product)
+                        Toast.makeText(context, "Agregado al carrito", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.padding(top = 4.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Agregar", style = MaterialTheme.typography.labelLarge)
+                }
             }
         }
     }

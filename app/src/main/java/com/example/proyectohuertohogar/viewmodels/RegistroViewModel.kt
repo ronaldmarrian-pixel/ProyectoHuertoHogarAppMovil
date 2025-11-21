@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// 1. Definimos el estado de la pantalla de Registro
 data class RegistroUiState(
     val email: String = "",
     val password: String = "",
@@ -27,60 +26,26 @@ class RegistroViewModel(private val userRepository: UserRepository) : ViewModel(
     private val _uiState = MutableStateFlow(RegistroUiState())
     val uiState: StateFlow<RegistroUiState> = _uiState.asStateFlow()
 
-    // --- Funciones de Manejo de Input ---
-
-    fun updateEmail(newEmail: String) {
-        _uiState.update { currentState -> currentState.copy(email = newEmail, emailError = null) }
-    }
-
-    fun updatePassword(newPassword: String) {
-        _uiState.update { currentState -> currentState.copy(password = newPassword, passwordError = null) }
-    }
-
-    fun updateConfirmPassword(newConfirmPassword: String) {
-        _uiState.update { currentState -> currentState.copy(confirmPassword = newConfirmPassword, confirmPasswordError = null) }
-    }
-
-    // --- Lógica de Validación y Registro ---
-
-    private fun validateInputs(): Boolean {
-        var isValid = true
-        val state = _uiState.value
-
-        // 1. Validación de campos vacíos (similares a Login)
-        if (state.email.isBlank()) { _uiState.update { it.copy(emailError = "El email no puede estar vacío.") }; isValid = false }
-        if (state.password.isBlank()) { _uiState.update { it.copy(passwordError = "La contraseña no puede estar vacía.") }; isValid = false }
-        if (state.confirmPassword.isBlank()) { _uiState.update { it.copy(confirmPasswordError = "Debes confirmar la contraseña.") }; isValid = false }
-
-        // 2. Validación CRÍTICA: Contraseñas deben coincidir
-        if (state.password.isNotEmpty() && state.confirmPassword.isNotEmpty() && state.password != state.confirmPassword) {
-            _uiState.update { it.copy(confirmPasswordError = "Las contraseñas no coinciden.") }
-            isValid = false
-        }
-
-        return isValid
-    }
+    fun updateEmail(v: String) { _uiState.update { it.copy(email = v) } }
+    fun updatePassword(v: String) { _uiState.update { it.copy(password = v) } }
+    fun updateConfirmPassword(v: String) { _uiState.update { it.copy(confirmPassword = v) } }
 
     fun register() {
-        if (!validateInputs()) return
+        val s = _uiState.value
+        if (s.email.isBlank() || s.password.isBlank()) return
+        if (s.password != s.confirmPassword) {
+            _uiState.update { it.copy(confirmPasswordError = "No coinciden") }
+            return
+        }
 
-        _uiState.update { it.copy(isLoading = true, registroError = null) }
+        _uiState.update { it.copy(isLoading = true) }
 
         viewModelScope.launch {
-            // Lógica de Registro: se implementará con Room/UserRepository
-            // Por ahora, simulamos un éxito.
-
-            // Reemplazar con: val success = userRepository.registerUser(email, password)
-            val success = true
-
+            val success = userRepository.registerUser(s.email, s.password)
             if (success) {
-                _uiState.update {
-                    it.copy(isRegistroSuccessful = true, isLoading = false)
-                }
+                _uiState.update { it.copy(isRegistroSuccessful = true, isLoading = false) }
             } else {
-                _uiState.update {
-                    it.copy(registroError = "Error al intentar registrar el usuario. (Email ya existe?)", isLoading = false)
-                }
+                _uiState.update { it.copy(registroError = "El email ya existe", isLoading = false) }
             }
         }
     }

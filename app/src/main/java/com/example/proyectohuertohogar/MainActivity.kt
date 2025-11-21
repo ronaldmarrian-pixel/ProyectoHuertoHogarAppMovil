@@ -3,23 +3,26 @@ package com.example.proyectohuertohogar
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.proyectohuertohogar.navigation.AppRoutes
 import com.example.proyectohuertohogar.ui.theme.ProyectoHuertoHogarTheme
-
-// Importamos TODAS las vistas de la aplicación
+// Importamos TODAS las vistas, incluida la nueva del Carrito
 import com.example.proyectohuertohogar.views.HomeView
 import com.example.proyectohuertohogar.views.LoginView
 import com.example.proyectohuertohogar.views.MapaTiendasView
 import com.example.proyectohuertohogar.views.RegistroView
-import com.example.proyectohuertohogar.views.CameraView // Importamos la vista de la cámara
+import com.example.proyectohuertohogar.views.CameraView
+import com.example.proyectohuertohogar.views.CartView // <-- Importación nueva
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,13 +65,17 @@ fun AppNavHost() {
 
         // 4. PERFIL (Cámara y Galería - Recurso Nativo 2)
         composable(AppRoutes.Perfil.route) {
-            // Aquí conectamos la vista CameraView que acabamos de crear
             CameraView(navController = navController)
         }
 
         // 5. MAPA DE TIENDAS (Recurso Nativo 1)
         composable(AppRoutes.MapaTiendas.route) {
             MapaTiendasView(navController = navController)
+        }
+
+        // 6. CARRITO DE COMPRAS (Funcionalidad Extra)
+        composable(AppRoutes.Carrito.route) {
+            CartView(navController = navController)
         }
     }
 }

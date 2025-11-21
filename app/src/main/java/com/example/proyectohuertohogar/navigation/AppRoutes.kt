@@ -17,4 +17,5 @@ sealed class AppRoutes(val route: String) {
     // Pantallas de Recursos Nativos
     data object MapaTiendas : AppRoutes("mapa_tiendas_screen")
     data object Camara : AppRoutes("camara_screen")
+    data object Carrito : AppRoutes("carrito_screen")
 }

@@ -6,108 +6,169 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 
-/**
- * Repositorio: Capa intermedia que maneja la lógica de negocio y
- * decide si los datos provienen de la base de datos (local) o de la red (futuro).
- */
 class UserRepository(private val userDao: UserDao) {
 
-    // --- Funciones de Utilidad (Hash, Login, Registro, etc. - Las que ya creaste) ---
+    // VARIABLE DE SESIÓN: Recuerda al usuario logueado
+    var currentUser: User? = null
+
     private fun hashPassword(password: String): String {
-        // ... (Tu código existente de hashPassword) ...
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
             val hash = digest.digest(password.toByteArray(Charsets.UTF_8))
             hash.joinToString("") { "%02x".format(it) }
-        } catch (e: Exception) {
-            Log.e("UserRepository", "Error al hashear contraseña: ${e.message}")
-            password
-        }
+        } catch (e: Exception) { password }
     }
 
     suspend fun registerUser(email: String, password: String): Boolean = withContext(Dispatchers.IO) {
-        // ... (Tu código existente de registerUser) ...
         val existingUser = userDao.getUserByEmail(email)
-        if (existingUser != null) { return@withContext false }
+        if (existingUser != null) return@withContext false
+
         val passwordHash = hashPassword(password)
-        val newUser = User(email = email, passwordHash = passwordHash, name = "Usuario HuertoHogar")
-        val result = userDao.insertUser(newUser)
-        return@withContext result != -1L
+        val newUser = User(email = email, passwordHash = passwordHash)
+        val id = userDao.insertUser(newUser)
+
+        if (id != -1L) {
+            // Iniciamos sesión automáticamente al registrar
+            currentUser = newUser.copy(id = id.toInt())
+            true
+        } else {
+            false
+        }
     }
 
     suspend fun loginUser(email: String, password: String): User? = withContext(Dispatchers.IO) {
-        // ... (Tu código existente de loginUser) ...
         val user = userDao.getUserByEmail(email)
-        if (user == null) { return@withContext null }
+        if (user == null) return@withContext null
+
         val enteredPasswordHash = hashPassword(password)
-        return@withContext if (enteredPasswordHash == user.passwordHash) user else null
+        if (enteredPasswordHash == user.passwordHash) {
+            currentUser = user // Guardamos la sesión
+            user
+        } else {
+            null
+        }
     }
 
-    suspend fun getUserByEmail(email: String): User? = withContext(Dispatchers.IO) { userDao.getUserByEmail(email) }
+    // Función para actualizar los datos del perfil
+    suspend fun updateUserProfile(name: String, phone: String, address: String, photoUri: String?) = withContext(Dispatchers.IO) {
+        currentUser?.let { user ->
+            val updatedUser = user.copy(
+                name = name,
+                phone = phone,
+                address = address,
+                photoUri = photoUri ?: user.photoUri
+            )
+            userDao.updateUser(updatedUser)
+            currentUser = updatedUser // Actualizamos la sesión en memoria
+        }
+    }
 
-    suspend fun updateUser(user: User) = withContext(Dispatchers.IO) { userDao.updateUser(user) }
-
-    // --- NUEVA FUNCIÓN: Catálogo de Productos Estático ---
-
-    /**
-     * Retorna la lista estática de productos para el catálogo.
-     */
     fun getProducts(): List<Product> {
         return STATIC_PRODUCTS
     }
 }
 
+// Datos de productos estáticos
 // Datos de productos estáticos (Mock Data) para el catálogo de HuertoHogar
 private val STATIC_PRODUCTS = listOf(
     Product(
         id = "FR001",
         name = "Manzanas Fuji",
-        price = 1990,
+        price = 1200,
         unit = "kg",
-        stock = 50,
-        description = "Manzanas frescas y crujientes, ideales para comer o para repostería.",
+        stock = 150,
+        description = "Manzanas crujientes y dulces, ideales para postres.",
         category = "Frutas Frescas",
-        imageUrl = "https://placehold.co/100x100/50b86a/FFFFFF?text=Manzana"
-    ),
-    Product(
-        id = "VR001",
-        name = "Zanahorias Orgánicas",
-        price = 1250,
-        unit = "manojo",
-        stock = 30,
-        description = "Zanahorias cultivadas sin pesticidas, dulces y perfectas para jugos.",
-        category = "Verduras Orgánicas",
-        imageUrl = "https://placehold.co/100x100/f87171/FFFFFF?text=Zanahoria"
-    ),
-    Product(
-        id = "VR002",
-        name = "Espinacas Frescas",
-        price = 990,
-        unit = "paquete",
-        stock = 45,
-        description = "Paquete de espinacas frescas y listas para ensaladas o salteados.",
-        category = "Verduras Orgánicas",
-        imageUrl = "https://placehold.co/100x100/22c55e/FFFFFF?text=Espinaca"
+        imageUrl = ""
     ),
     Product(
         id = "FR002",
         name = "Naranjas Valencia",
-        price = 1500,
+        price = 1000,
+        unit = "kg",
+        stock = 200,
+        description = "Naranjas jugosas, perfectas para jugo natural.",
+        category = "Frutas Frescas",
+        imageUrl = ""
+    ),
+    Product(
+        id = "FR003",
+        name = "Plátanos Cavendish",
+        price = 800,
         unit = "kg",
         stock = 80,
-        description = "Naranjas de jugo, dulces y con gran cantidad de vitamina C.",
+        description = "Plátanos ricos en potasio, ideales para deportistas.",
         category = "Frutas Frescas",
-        imageUrl = "https://placehold.co/100x100/f97316/FFFFFF?text=Naranja"
+        imageUrl = ""
+    ),
+    Product(
+        id = "VR001",
+        name = "Zanahorias Orgánicas",
+        price = 900,
+        unit = "atado",
+        stock = 100,
+        description = "Cultivadas sin pesticidas, dulces y crujientes.",
+        category = "Verduras Orgánicas",
+        imageUrl = ""
+    ),
+    Product(
+        id = "VR002",
+        name = "Espinacas Frescas",
+        price = 700,
+        unit = "bolsa 500g",
+        stock = 45,
+        description = "Hojas verdes seleccionadas, listas para ensaladas.",
+        category = "Verduras Orgánicas",
+        imageUrl = ""
+    ),
+    Product(
+        id = "VR003",
+        name = "Pimientos Tricolores",
+        price = 1500,
+        unit = "pack 3u",
+        stock = 60,
+        description = "Mix de pimientos rojo, verde y amarillo.",
+        category = "Verduras Orgánicas",
+        imageUrl = ""
     ),
     Product(
         id = "PO001",
-        name = "Miel de Abejas Orgánica",
-        price = 3500,
-        unit = "frasco (500g)",
-        stock = 20,
-        description = "Miel pura y orgánica, recolectada de forma sostenible.",
+        name = "Miel de Abejas",
+        price = 5000,
+        unit = "frasco 500g",
+        stock = 50,
+        description = "Miel pura de ulmo, producción artesanal.",
         category = "Productos Orgánicos",
-        imageUrl = "https://placehold.co/100x100/f59e0b/FFFFFF?text=Miel"
+        imageUrl = ""
+    ),
+    Product(
+        id = "PO003",
+        name = "Quinua Real",
+        price = 3200,
+        unit = "bolsa 1kg",
+        stock = 30,
+        description = "Superalimento andino, lavado y listo para cocinar.",
+        category = "Productos Orgánicos",
+        imageUrl = ""
+    ),
+    Product(
+        id = "PL001",
+        name = "Leche Entera",
+        price = 1100,
+        unit = "litro",
+        stock = 120,
+        description = "Leche fresca de vaca, pasteurizada.",
+        category = "Lácteos",
+        imageUrl = ""
+    ),
+    Product(
+        id = "PL002",
+        name = "Queso de Cabra",
+        price = 4500,
+        unit = "pieza 250g",
+        stock = 15,
+        description = "Queso artesanal maduro con especias.",
+        category = "Lácteos",
+        imageUrl = ""
     )
-    // Se pueden añadir más productos aquí si es necesario
 )
