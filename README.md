@@ -1,6 +1,5 @@
 # 🌿 Proyecto HuertoHogar App Móvil
 
-![Banner del Proyecto](https://via.placeholder.com/1000x300?text=HuertoHogar+App+Movil)
 
 Bienvenido al repositorio oficial de la aplicación móvil nativa **HuertoHogar**. Este proyecto representa una solución integral para la gestión y visualización de productos agrícolas, desarrollada con las tecnologías más modernas del ecosistema Android: **Kotlin** y **Jetpack Compose**.
 
