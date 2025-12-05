@@ -1,15 +1,22 @@
 package com.example.proyectohuertohogar.model
 
+import androidx.room.Entity
+import androidx.room.PrimaryKey
+
 /**
- * Define la estructura de un producto vendido en HuertoHogar.
+ * Entidad local (Domain Model) de Producto, usada por la base de datos Room.
+ * Recibe la conversión de ProductApiModel.
  */
+@Entity(tableName = "products")
 data class Product(
-    val id: String, // ID único del producto (ej: FR001)
+    @PrimaryKey(autoGenerate = true)
+    val uid: Int = 0, // Clave primaria local (la genera Room)
+    val id: String, // ID externo (el que viene de la API, usado como referencia)
     val name: String,
     val price: Int,
-    val unit: String, // Unidad de medida (ej: "kg", "unidad")
+    val unit: String, // Definido como "unidad" en tu toDomain()
     val stock: Int,
     val description: String,
     val category: String,
-    val imageUrl: String // URL para la imagen del producto
+    val imageUrl: String
 )

@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// 1. Agregamos 'isAdmin' al estado para que la UI sepa a dónde ir
 data class LoginUiState(
     val email: String = "",
     val password: String = "",
@@ -16,7 +17,8 @@ data class LoginUiState(
     val passwordError: String? = null,
     val isLoading: Boolean = false,
     val loginError: String? = null,
-    val isLoginSuccessful: Boolean = false
+    val isLoginSuccessful: Boolean = false,
+    val isAdmin: Boolean = false // <--- NUEVO CAMPO
 )
 
 class LoginViewModel(private val userRepository: UserRepository) : ViewModel() {
@@ -41,11 +43,18 @@ class LoginViewModel(private val userRepository: UserRepository) : ViewModel() {
         _uiState.update { it.copy(isLoading = true, loginError = null) }
 
         viewModelScope.launch {
-            // El repositorio se encarga de guardar el currentUser si el login es exitoso
+            // Llamamos al repositorio
             val user = userRepository.loginUser(_uiState.value.email, _uiState.value.password)
 
             if (user != null) {
-                _uiState.update { it.copy(isLoginSuccessful = true, isLoading = false) }
+                // 2. Si el usuario existe, guardamos si es admin o no en el estado
+                _uiState.update {
+                    it.copy(
+                        isLoginSuccessful = true,
+                        isLoading = false,
+                        isAdmin = user.isAdmin // <--- AQUÍ CAPTURAMOS EL ROL
+                    )
+                }
             } else {
                 _uiState.update { it.copy(loginError = "Credenciales inválidas.", isLoading = false) }
             }
@@ -53,6 +62,6 @@ class LoginViewModel(private val userRepository: UserRepository) : ViewModel() {
     }
 
     fun resetLoginStatus() {
-        _uiState.update { it.copy(isLoginSuccessful = false) }
+        _uiState.update { it.copy(isLoginSuccessful = false, isAdmin = false) }
     }
 }

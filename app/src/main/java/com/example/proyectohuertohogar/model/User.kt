@@ -1,4 +1,4 @@
-package com.example.proyectohuertohogar.data
+package com.example.proyectohuertohogar.model
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
@@ -11,5 +11,6 @@ data class User(
     val name: String = "Usuario",
     val phone: String = "",
     val address: String = "",
-    val photoUri: String? = null 
+    val photoUri: String? = null,
+    val isAdmin: Boolean = false
 )

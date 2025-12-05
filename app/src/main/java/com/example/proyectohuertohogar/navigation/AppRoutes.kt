@@ -18,4 +18,7 @@ sealed class AppRoutes(val route: String) {
     data object MapaTiendas : AppRoutes("mapa_tiendas_screen")
     data object Camara : AppRoutes("camara_screen")
     data object Carrito : AppRoutes("carrito_screen")
+    data object Checkout : AppRoutes("checkout_screen")
+    data object Admin : AppRoutes("admin_screen")
+    data object AdminInventario : AppRoutes("admin_products_screen")
 }

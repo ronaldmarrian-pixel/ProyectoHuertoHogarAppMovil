@@ -1,16 +1,26 @@
 package com.example.proyectohuertohogar.data
 
 import android.util.Log
+import com.example.proyectohuertohogar.data.remote.RetrofitClient
 import com.example.proyectohuertohogar.model.Product
+import com.example.proyectohuertohogar.model.User
+import com.example.proyectohuertohogar.model.toDomain
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
 import java.security.MessageDigest
 
-class UserRepository(private val userDao: UserDao) {
+// Constructor con 2 DAOs (Usuarios y Productos)
+class UserRepository(
+    private val userDao: UserDao,
+    private val productDao: ProductDao
+) {
 
-    // VARIABLE DE SESIÓN: Recuerda al usuario logueado
     var currentUser: User? = null
 
+    // ----------------------------------------------------------
+    // 1. SEGURIDAD Y AUTH
+    // ----------------------------------------------------------
     private fun hashPassword(password: String): String {
         return try {
             val digest = MessageDigest.getInstance("SHA-256")
@@ -19,17 +29,41 @@ class UserRepository(private val userDao: UserDao) {
         } catch (e: Exception) { password }
     }
 
+    // --- REGISTRO INTELIGENTE (PRIMER USUARIO = ADMIN) ---
     suspend fun registerUser(email: String, password: String): Boolean = withContext(Dispatchers.IO) {
+        // 1. Verificar si el correo ya existe
         val existingUser = userDao.getUserByEmail(email)
         if (existingUser != null) return@withContext false
 
+        // 2. Verificar si es el PRIMER usuario en toda la app
+        // (Nota: Necesitamos una forma de contar usuarios. Como no tenemos count(),
+        // intentaremos ver si la tabla está vacía de otra forma o asumimos lógica de negocio).
+        // Una forma simple es: si el ID que devuelve la DB es 1, es el primero.
+        // Pero para estar seguros, haremos una lógica en el insert.
+
+        // Vamos a determinar si debe ser admin ANTES de insertar
+        // Truco: Intentamos buscar si existe AL MENOS UN usuario cualquiera.
+        // Como tu DAO actual no tiene "getAllUsers", usaremos una lógica basada en el ID al insertar
+        // o podemos asumir que el primer registro siempre tendrá ID 1 si la base está limpia.
+
+        // MEJOR APROXIMACIÓN: Hacemos el insert normal.
         val passwordHash = hashPassword(password)
-        val newUser = User(email = email, passwordHash = passwordHash)
+
+        // Por defecto no es admin
+        var newUser = User(email = email, passwordHash = passwordHash, isAdmin = false)
+
         val id = userDao.insertUser(newUser)
 
         if (id != -1L) {
-            // Iniciamos sesión automáticamente al registrar
-            currentUser = newUser.copy(id = id.toInt())
+            // Si el ID es 1, significa que es el primer usuario en la historia de esta DB.
+            // ¡Lo convertimos en Admin!
+            if (id == 1L) {
+                val adminUser = newUser.copy(id = id.toInt(), isAdmin = true)
+                userDao.updateUser(adminUser) // Actualizamos para darle el poder
+                currentUser = adminUser
+            } else {
+                currentUser = newUser.copy(id = id.toInt())
+            }
             true
         } else {
             false
@@ -42,14 +76,13 @@ class UserRepository(private val userDao: UserDao) {
 
         val enteredPasswordHash = hashPassword(password)
         if (enteredPasswordHash == user.passwordHash) {
-            currentUser = user // Guardamos la sesión
+            currentUser = user
             user
         } else {
             null
         }
     }
 
-    // Función para actualizar los datos del perfil
     suspend fun updateUserProfile(name: String, phone: String, address: String, photoUri: String?) = withContext(Dispatchers.IO) {
         currentUser?.let { user ->
             val updatedUser = user.copy(
@@ -59,116 +92,54 @@ class UserRepository(private val userDao: UserDao) {
                 photoUri = photoUri ?: user.photoUri
             )
             userDao.updateUser(updatedUser)
-            currentUser = updatedUser // Actualizamos la sesión en memoria
+            currentUser = updatedUser
         }
     }
 
-    fun getProducts(): List<Product> {
-        return STATIC_PRODUCTS
+    // ----------------------------------------------------------
+    // 2. CREACIÓN DE ADMIN MANUAL (OBSOLETO / ELIMINADO)
+    // ----------------------------------------------------------
+    // Ya no necesitamos createDefaultAdmin() porque la lógica está en registerUser.
+    // Dejamos la función vacía para que no te de error en HuertoHogarApp.kt si la llamas.
+    suspend fun createDefaultAdmin() {
+        // Lógica obsoleta. Ahora el primer usuario registrado será el admin.
     }
+
+    // ----------------------------------------------------------
+    // 3. CATÁLOGO PARA CLIENTES (Conexión API REST)
+    // ----------------------------------------------------------
+    suspend fun getProducts(): List<Product> = withContext(Dispatchers.IO) {
+        try {
+            val apiResponse = RetrofitClient.api.getProducts()
+            val domainProducts = apiResponse.map { it.toDomain() }
+            if (domainProducts.isNotEmpty()) return@withContext domainProducts
+            return@withContext STATIC_PRODUCTS
+        } catch (e: Exception) {
+            Log.e("UserRepository", "Error API: ${e.message}")
+            return@withContext STATIC_PRODUCTS
+        }
+    }
+
+    // ----------------------------------------------------------
+    // 4. GESTIÓN DE PRODUCTOS PARA ADMIN (Base de Datos Local)
+    // ----------------------------------------------------------
+
+    fun getAllProductsLocal(): Flow<List<Product>> = productDao.getAllProducts()
+
+    suspend fun upsertProduct(product: Product) = withContext(Dispatchers.IO) {
+        if (product.uid == 0) productDao.insertProduct(product) else productDao.updateProduct(product)
+    }
+
+    suspend fun deleteProduct(product: Product) = withContext(Dispatchers.IO) {
+        productDao.deleteProduct(product)
+    }
+
+    suspend fun initDefaultData() { }
 }
 
-// Datos de productos estáticos
-// Datos de productos estáticos (Mock Data) para el catálogo de HuertoHogar
+// Datos de respaldo
 private val STATIC_PRODUCTS = listOf(
-    Product(
-        id = "FR001",
-        name = "Manzanas Fuji",
-        price = 1200,
-        unit = "kg",
-        stock = 150,
-        description = "Manzanas crujientes y dulces, ideales para postres.",
-        category = "Frutas Frescas",
-        imageUrl = ""
-    ),
-    Product(
-        id = "FR002",
-        name = "Naranjas Valencia",
-        price = 1000,
-        unit = "kg",
-        stock = 200,
-        description = "Naranjas jugosas, perfectas para jugo natural.",
-        category = "Frutas Frescas",
-        imageUrl = ""
-    ),
-    Product(
-        id = "FR003",
-        name = "Plátanos Cavendish",
-        price = 800,
-        unit = "kg",
-        stock = 80,
-        description = "Plátanos ricos en potasio, ideales para deportistas.",
-        category = "Frutas Frescas",
-        imageUrl = ""
-    ),
-    Product(
-        id = "VR001",
-        name = "Zanahorias Orgánicas",
-        price = 900,
-        unit = "atado",
-        stock = 100,
-        description = "Cultivadas sin pesticidas, dulces y crujientes.",
-        category = "Verduras Orgánicas",
-        imageUrl = ""
-    ),
-    Product(
-        id = "VR002",
-        name = "Espinacas Frescas",
-        price = 700,
-        unit = "bolsa 500g",
-        stock = 45,
-        description = "Hojas verdes seleccionadas, listas para ensaladas.",
-        category = "Verduras Orgánicas",
-        imageUrl = ""
-    ),
-    Product(
-        id = "VR003",
-        name = "Pimientos Tricolores",
-        price = 1500,
-        unit = "pack 3u",
-        stock = 60,
-        description = "Mix de pimientos rojo, verde y amarillo.",
-        category = "Verduras Orgánicas",
-        imageUrl = ""
-    ),
-    Product(
-        id = "PO001",
-        name = "Miel de Abejas",
-        price = 5000,
-        unit = "frasco 500g",
-        stock = 50,
-        description = "Miel pura de ulmo, producción artesanal.",
-        category = "Productos Orgánicos",
-        imageUrl = ""
-    ),
-    Product(
-        id = "PO003",
-        name = "Quinua Real",
-        price = 3200,
-        unit = "bolsa 1kg",
-        stock = 30,
-        description = "Superalimento andino, lavado y listo para cocinar.",
-        category = "Productos Orgánicos",
-        imageUrl = ""
-    ),
-    Product(
-        id = "PL001",
-        name = "Leche Entera",
-        price = 1100,
-        unit = "litro",
-        stock = 120,
-        description = "Leche fresca de vaca, pasteurizada.",
-        category = "Lácteos",
-        imageUrl = ""
-    ),
-    Product(
-        id = "PL002",
-        name = "Queso de Cabra",
-        price = 4500,
-        unit = "pieza 250g",
-        stock = 15,
-        description = "Queso artesanal maduro con especias.",
-        category = "Lácteos",
-        imageUrl = ""
-    )
+    Product(id = "OFF1", name = "Manzanas (Offline)", price = 1000, unit = "kg", stock = 10, description = "Sin internet", category = "Frutas", imageUrl = ""),
+    Product(id = "OFF2", name = "Naranjas (Offline)", price = 1000, unit = "kg", stock = 10, description = "Sin internet", category = "Frutas", imageUrl = "")
 )
+

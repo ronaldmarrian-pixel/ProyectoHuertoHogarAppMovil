@@ -1,14 +1,31 @@
 package com.example.proyectohuertohogar
 
 import android.app.Application
-import com.example.proyectohuertohogar.data.AppDatabase
+import com.example.proyectohuertohogar.data.AppDatabase // Importamos la clase correcta
 import com.example.proyectohuertohogar.data.UserRepository
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 class HuertoHogarApp : Application() {
 
-    // Inicialización de la base de datos (DB)
-    private val database by lazy { AppDatabase.getDatabase(this) }
+    // 1. Instancia de la base de datos usando AppDatabase
+    private val database by lazy {
+        AppDatabase.getDatabase(this)
+    }
 
-    // Inicialización del repositorio, pasándole el DAO de la DB
-    val userRepository by lazy { UserRepository(database.userDao()) }
+    // 2. Instancia del repositorio (inyectamos los DAOs)
+    val userRepository by lazy {
+        UserRepository(
+            userDao = database.userDao(),
+            productDao = database.productDao()
+        )
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        // Inicialización opcional
+        MainScope().launch {
+            userRepository.initDefaultData()
+        }
+    }
 }

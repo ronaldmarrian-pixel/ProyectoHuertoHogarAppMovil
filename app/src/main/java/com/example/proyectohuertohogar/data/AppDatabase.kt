@@ -4,15 +4,17 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.example.proyectohuertohogar.model.Product
+import com.example.proyectohuertohogar.model.User
 
-// 1. Definimos las entidades (tablas) que tendrá la DB
-@Database(entities = [User::class], version = 1, exportSchema = false)
+// Usamos el nombre que ya tienes en tu proyecto: AppDatabase
+@Database(entities = [User::class, Product::class], version = 1, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
 
-    // El DAO que expone los comandos
+    // Conectamos los DAOs
     abstract fun userDao(): UserDao
+    abstract fun productDao(): ProductDao
 
-    // 2. Singleton: Asegura que solo exista una instancia de la DB
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
@@ -21,15 +23,11 @@ abstract class AppDatabase : RoomDatabase() {
             return INSTANCE ?: synchronized(this) {
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
-                    AppDatabase::class.java,
-                    "huertohogar_database" // Nombre del archivo de la DB
+                    AppDatabase::class.java, // Aquí referenciamos esta misma clase
+                    "huerto_database"
                 )
-                    // SOLUCIÓN 1: Previene futuros errores si cambiamos la estructura de la tabla 'User'
                     .fallbackToDestructiveMigration()
-                    // SOLUCIÓN 2: Permite que la DB se cree en el hilo principal
-                    // (Esto EVITA el crash "keeps stopping" que estás viendo)
-                    .allowMainThreadQueries()
-                    .build() // Construye la base de datos
+                    .build()
                 INSTANCE = instance
                 instance
             }
